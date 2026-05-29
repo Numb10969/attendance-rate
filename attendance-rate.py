@@ -4,87 +4,113 @@ import calendar
 import json
 import os
 
-# =====================================
+# ======================================
 # ページ設定
-# =====================================
+# ======================================
 st.set_page_config(
     page_title="出席率カレンダー",
     layout="wide"
 )
 
-# =====================================
+# ======================================
 # CSS
-# =====================================
+# ======================================
 st.markdown("""
 <style>
 
 .stApp {
-    background-color: #0f1117;
+    background-color: #0d1117;
     color: white;
 }
 
+/* Streamlitデフォルト余白 */
+.block-container {
+    padding-top: 1rem;
+}
+
+/* タイトル */
 .main-title {
-    font-size: 42px;
+    font-size: 48px;
     font-weight: bold;
     color: #00ff88;
     margin-bottom: 10px;
 }
 
-.rate-box {
-    background-color: #1a1d26;
+/* 情報ボックス */
+.info-box {
+    background-color: #161b22;
     border: 2px solid #00ff88;
     border-radius: 15px;
     padding: 20px;
-    margin-bottom: 25px;
-}
-
-.month-box {
-    background-color: #1a1d26;
-    border-radius: 15px;
-    padding: 15px;
     margin-bottom: 30px;
-    border: 1px solid #2dff9f;
 }
 
+/* 月 */
+.month-box {
+    background-color: #161b22;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid #00ff88;
+}
+
+/* 日付カード */
 .day-card {
-    background-color: #161922;
-    padding: 8px;
+    background-color: #0f141b;
     border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
     text-align: center;
-    margin-bottom: 8px;
     border: 1px solid #333;
 }
 
+/* 日付数字 */
 .day-number {
     color: #00ff88;
+    font-size: 24px;
     font-weight: bold;
-    font-size: 20px;
 }
 
-.week-label {
+/* 曜日 */
+.weekday {
     text-align: center;
     color: #00ff88;
-    font-weight: bold;
     font-size: 18px;
+    font-weight: bold;
     margin-bottom: 10px;
 }
 
-.small-text {
-    color: #cccccc;
-    font-size: 14px;
+/* セレクトボックス */
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #111;
+}
+
+/* ボタン */
+.stButton button {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #00ff88;
+    background-color: #111;
+    color: white;
+}
+
+/* ボタン hover */
+.stButton button:hover {
+    border: 1px solid #00ff88;
+    color: #00ff88;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================
+# ======================================
 # 保存ファイル
-# =====================================
+# ======================================
 SAVE_FILE = "attendance_data.json"
 
-# =====================================
+# ======================================
 # データ読み込み
-# =====================================
+# ======================================
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
@@ -94,24 +120,24 @@ def load_data():
             return {}
     return {}
 
-# =====================================
+# ======================================
 # データ保存
-# =====================================
+# ======================================
 def save_data(data):
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# =====================================
-# セッション初期化
-# =====================================
+# ======================================
+# 初期化
+# ======================================
 if "attendance_data" not in st.session_state:
     st.session_state.attendance_data = load_data()
 
 attendance_data = st.session_state.attendance_data
 
-# =====================================
-# 期間設定
-# =====================================
+# ======================================
+# 期間
+# ======================================
 today = date.today()
 
 if today.month >= 4:
@@ -121,25 +147,17 @@ else:
     start_date = date(today.year - 1, 4, 1)
     end_date = date(today.year, 4, 1)
 
-# =====================================
+# ======================================
 # タイトル
-# =====================================
+# ======================================
 st.markdown(
     '<div class="main-title">出席率管理カレンダー</div>',
     unsafe_allow_html=True
 )
 
-st.markdown("""
-<div class="small-text">
-🟩 出席 / 🟥 欠席 / ⬜ 未選択
-</div>
-""", unsafe_allow_html=True)
-
-st.write("")
-
-# =====================================
+# ======================================
 # 出席率計算
-# =====================================
+# ======================================
 attended = sum(
     1 for v in attendance_data.values()
     if v == "出席"
@@ -152,41 +170,40 @@ absent = sum(
 
 total = attended + absent
 
-if total == 0:
-    rate = 0
-else:
-    rate = (attended / total) * 100
+rate = 0 if total == 0 else (attended / total) * 100
 
-# =====================================
-# ステータス表示
-# =====================================
-st.markdown('<div class="rate-box">', unsafe_allow_html=True)
+# ======================================
+# 情報表示
+# ======================================
+st.markdown('<div class="info-box">', unsafe_allow_html=True)
 
 st.markdown(
     f"""
     <h1 style="color:#00ff88;">
-        出席率: {rate:.2f}%
+    出席率: {rate:.2f}%
     </h1>
+
+    <h3>
+    🟩 出席: {attended}日　
+    🟥 欠席: {absent}日　
+    📅 合計: {total}日
+    </h3>
     """,
     unsafe_allow_html=True
 )
 
-col1, col2, col3 = st.columns(3)
+st.markdown("</div>", unsafe_allow_html=True)
 
-with col1:
-    st.metric("🟩 出席", attended)
+# ======================================
+# 状態変更
+# ======================================
+def set_status(date_str, status):
+    attendance_data[date_str] = status
+    save_data(attendance_data)
 
-with col2:
-    st.metric("🟥 欠席", absent)
-
-with col3:
-    st.metric("📅 合計", total)
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-# =====================================
-# 月ごと表示
-# =====================================
+# ======================================
+# カレンダー
+# ======================================
 current = start_date
 
 while current <= end_date:
@@ -208,10 +225,10 @@ while current <= end_date:
 
     header_cols = st.columns(7)
 
-    for i, day_name in enumerate(weekdays):
+    for i, w in enumerate(weekdays):
         with header_cols[i]:
             st.markdown(
-                f'<div class="week-label">{day_name}</div>',
+                f'<div class="weekday">{w}</div>',
                 unsafe_allow_html=True
             )
 
@@ -235,10 +252,15 @@ while current <= end_date:
 
             date_str = current_date.isoformat()
 
-            current_value = attendance_data.get(
-                date_str,
-                "未選択"
-            )
+            status = attendance_data.get(date_str, "未選択")
+
+            # 色表示
+            if status == "出席":
+                status_text = "🟩 出席"
+            elif status == "欠席":
+                status_text = "🟥 欠席"
+            else:
+                status_text = "⬜ 未選択"
 
             with cols[i]:
 
@@ -246,34 +268,42 @@ while current <= end_date:
                     f"""
                     <div class="day-card">
                     <div class="day-number">{day}</div>
+                    <div>{status_text}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-                # ← バグ修正
-                # selectbox の値を直接保存する
-                selected = st.radio(
-                    label="",
-                    options=["未選択", "出席", "欠席"],
-                    index=["未選択", "出席", "欠席"].index(current_value),
-                    key=f"radio_{date_str}",
-                    horizontal=False
-                )
+                if st.button(
+                    "出席",
+                    key=f"attend_{date_str}"
+                ):
+                    set_status(date_str, "出席")
+                    st.rerun()
 
-                attendance_data[date_str] = selected
+                if st.button(
+                    "欠席",
+                    key=f"absent_{date_str}"
+                ):
+                    set_status(date_str, "欠席")
+                    st.rerun()
+
+                if st.button(
+                    "リセット",
+                    key=f"reset_{date_str}"
+                ):
+                    set_status(date_str, "未選択")
+                    st.rerun()
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # 次の月へ
+    # 次の月
     if month == 12:
         current = date(year + 1, 1, 1)
     else:
         current = date(year, month + 1, 1)
 
-# =====================================
-# 保存
-# =====================================
-save_data(attendance_data)
-
-st.success("データは自動保存されています")
+# ======================================
+# 完了表示
+# ======================================
+st.success("自動保存されています")
