@@ -27,7 +27,7 @@ st.markdown("""
 /* 余白 */
 .block-container {
     padding-top: clamp(1rem, 5vw, 4rem);
-    padding-bottom: 1rem;
+    padding-bottom: 2rem;
 }
 
 /* タイトル */
@@ -36,7 +36,6 @@ st.markdown("""
     font-weight: bold;
     color: #00ff88;
     margin-bottom: 15px;
-    word-break: break-word;
 }
 
 /* 情報ボックス */
@@ -56,40 +55,24 @@ st.markdown("""
     border: 1px solid #00ff88;
 }
 
-/* 日付カード */
-.day-card {
-    background-color: #0f141b;
-    border-radius: 10px;
-    padding: 8px;
-    margin-bottom: 8px;
-    text-align: center;
-    border: 1px solid #333;
-}
-
-/* 日付 */
-.day-number {
-    color: #00ff88;
-    font-size: 20px;
-    font-weight: bold;
-}
-
 /* 曜日 */
 .weekday {
     text-align: center;
     color: #00ff88;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
-/* ボタン */
+/* 日付ボタン */
 .stButton button {
     width: 100%;
-    border-radius: 8px;
-    border: 1px solid #00ff88;
+    border-radius: 10px;
+    border: 1px solid #333;
     background-color: #111;
     color: white;
-    margin-bottom: 5px;
+    min-height: 60px;
+    font-size: 14px;
 }
 
 /* hover */
@@ -98,30 +81,26 @@ st.markdown("""
     color: #00ff88;
 }
 
-/* selectbox */
-.stSelectbox div[data-baseweb="select"] {
-    background-color: #111;
-    color: white;
+/* モーダル風 */
+.popup-box {
+    background-color: #161b22;
+    border: 2px solid #00ff88;
+    border-radius: 15px;
+    padding: 25px;
+    margin-top: 25px;
 }
 
 /* スマホ */
 @media (max-width: 768px) {
 
-    .day-number {
-        font-size: 14px;
-    }
-
     .weekday {
-        font-size: 12px;
-    }
-
-    .day-card {
-        padding: 4px;
+        font-size: 11px;
     }
 
     .stButton button {
-        font-size: 12px;
-        padding: 0.4rem;
+        min-height: 50px;
+        font-size: 11px;
+        padding: 0.3rem;
     }
 
 }
@@ -178,11 +157,6 @@ attendance_data = st.session_state.attendance_data
 # ======================================
 if "selected_date" not in st.session_state:
     st.session_state.selected_date = None
-
-# ======================================
-# スマホ判定
-# ======================================
-is_mobile = st.query_params.get("mobile", "0") == "1"
 
 # ======================================
 # 期間設定
@@ -343,7 +317,7 @@ for i, weekday in enumerate(weekdays):
         )
 
 # ======================================
-# カレンダー生成
+# カレンダー
 # ======================================
 cal = calendar.Calendar(firstweekday=0)
 
@@ -373,15 +347,18 @@ for week in cal.monthdayscalendar(year, month):
             "未選択"
         )
 
-        # 状態色
+        # 状態表示
         if status == "出席":
-            label = f"🟩 {day}"
+
+            label = f"🟩\\n{day}"
 
         elif status == "欠席":
-            label = f"🟥 {day}"
+
+            label = f"🟥\\n{day}"
 
         else:
-            label = f"⬜ {day}"
+
+            label = f"⬛\\n{day}"
 
         with cols[i]:
 
@@ -394,7 +371,7 @@ for week in cal.monthdayscalendar(year, month):
                 st.session_state.selected_date = date_str
 
 # ======================================
-# 日付編集UI
+# モーダル風ポップアップ
 # ======================================
 if st.session_state.selected_date:
 
@@ -405,32 +382,61 @@ if st.session_state.selected_date:
         "未選択"
     )
 
-    st.markdown("---")
-
-    st.subheader(f"{selected_date} の設定")
-
-    new_status = st.radio(
-        "状態を選択",
-        ["出席", "欠席", "未選択"],
-        index=["出席", "欠席", "未選択"].index(current_status),
-        horizontal=True
+    st.markdown(
+        """
+        <div class="popup-box">
+        """,
+        unsafe_allow_html=True
     )
 
-    col1, col2 = st.columns(2)
+    st.subheader(f"📅 {selected_date}")
+
+    st.write("出欠席を設定してください")
+
+    col1, col2, col3 = st.columns(3)
 
     with col1:
 
-        if st.button("保存"):
+        if st.button(
+            "🟩 出席",
+            use_container_width=True
+        ):
 
-            set_status(selected_date, new_status)
+            set_status(selected_date, "出席")
+            st.session_state.selected_date = None
             st.rerun()
 
     with col2:
 
-        if st.button("閉じる"):
+        if st.button(
+            "🟥 欠席",
+            use_container_width=True
+        ):
 
+            set_status(selected_date, "欠席")
             st.session_state.selected_date = None
             st.rerun()
+
+    with col3:
+
+        if st.button(
+            "⬛ リセット",
+            use_container_width=True
+        ):
+
+            set_status(selected_date, "未選択")
+            st.session_state.selected_date = None
+            st.rerun()
+
+    if st.button("閉じる"):
+
+        st.session_state.selected_date = None
+        st.rerun()
+
+    st.markdown(
+        "</div>",
+        unsafe_allow_html=True
+    )
 
 # ======================================
 # 閉じタグ
