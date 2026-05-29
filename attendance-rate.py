@@ -27,7 +27,7 @@ st.markdown("""
 /* 余白 */
 .block-container {
     padding-top: clamp(1rem, 5vw, 4rem);
-    padding-bottom: 2rem;
+    padding-bottom: 1rem;
 }
 
 /* タイトル */
@@ -36,6 +36,7 @@ st.markdown("""
     font-weight: bold;
     color: #00ff88;
     margin-bottom: 15px;
+    word-break: break-word;
 }
 
 /* 情報ボックス */
@@ -55,24 +56,40 @@ st.markdown("""
     border: 1px solid #00ff88;
 }
 
+/* 日付カード */
+.day-card {
+    background-color: #0f141b;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+/* 日付 */
+.day-number {
+    color: #00ff88;
+    font-size: 24px;
+    font-weight: bold;
+}
+
 /* 曜日 */
 .weekday {
     text-align: center;
     color: #00ff88;
-    font-size: 15px;
+    font-size: 18px;
     font-weight: bold;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-/* 日付ボタン */
+/* ボタン */
 .stButton button {
     width: 100%;
-    border-radius: 10px;
-    border: 1px solid #333;
+    border-radius: 8px;
+    border: 1px solid #00ff88;
     background-color: #111;
     color: white;
-    min-height: 60px;
-    font-size: 14px;
+    margin-bottom: 5px;
 }
 
 /* hover */
@@ -81,25 +98,35 @@ st.markdown("""
     color: #00ff88;
 }
 
-/* モーダル風 */
-.popup-box {
-    background-color: #161b22;
-    border: 2px solid #00ff88;
-    border-radius: 15px;
-    padding: 25px;
-    margin-top: 25px;
+/* selectbox */
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #111;
+    color: white;
 }
 
-/* スマホ */
+/* スクロールバー */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00ff88;
+    border-radius: 10px;
+}
+
+/* スマホ対応 */
 @media (max-width: 768px) {
 
+    .day-number {
+        font-size: 18px;
+    }
+
     .weekday {
-        font-size: 11px;
+        font-size: 14px;
     }
 
     .stButton button {
-        min-height: 50px;
-        font-size: 11px;
+        font-size: 12px;
         padding: 0.3rem;
     }
 
@@ -153,10 +180,9 @@ if "attendance_data" not in st.session_state:
 attendance_data = st.session_state.attendance_data
 
 # ======================================
-# 選択日
+# スマホ判定
 # ======================================
-if "selected_date" not in st.session_state:
-    st.session_state.selected_date = None
+is_mobile = st.query_params.get("mobile", "0") == "1"
 
 # ======================================
 # 期間設定
@@ -225,7 +251,7 @@ st.markdown(
 )
 
 # ======================================
-# 月リスト
+# 月リスト作成
 # ======================================
 months = []
 
@@ -242,7 +268,7 @@ while current <= end_date:
         current = date(current.year, current.month + 1, 1)
 
 # ======================================
-# 現在月
+# 現在月index
 # ======================================
 default_index = 0
 
@@ -256,7 +282,7 @@ for i, m in enumerate(months):
         break
 
 # ======================================
-# 月選択
+# 月切り替えUI
 # ======================================
 selected_month = st.selectbox(
     "表示する月",
@@ -284,7 +310,7 @@ def set_status(date_str, status):
     save_data(attendance_data)
 
 # ======================================
-# 月タイトル
+# 月表示
 # ======================================
 st.markdown(
     f"""
@@ -299,144 +325,175 @@ st.markdown(
 # ======================================
 # 曜日
 # ======================================
-weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+if not is_mobile:
 
-header_cols = st.columns(7)
+    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
 
-for i, weekday in enumerate(weekdays):
+    header_cols = st.columns(7)
 
-    with header_cols[i]:
+    for i, weekday in enumerate(weekdays):
 
-        st.markdown(
-            f"""
-            <div class="weekday">
-            {weekday}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        with header_cols[i]:
+
+            st.markdown(
+                f"""
+                <div class="weekday">
+                {weekday}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 # ======================================
-# カレンダー
+# カレンダー生成
 # ======================================
 cal = calendar.Calendar(firstweekday=0)
 
 for week in cal.monthdayscalendar(year, month):
 
-    cols = st.columns(7)
+    # ======================================
+    # PC表示
+    # ======================================
+    if not is_mobile:
 
-    for i, day in enumerate(week):
+        cols = st.columns(7)
 
-        if day == 0:
-            cols[i].write("")
-            continue
+        for i, day in enumerate(week):
 
-        current_date = date(year, month, day)
+            if day == 0:
+                cols[i].write("")
+                continue
 
-        if (
-            current_date < start_date
-            or current_date > end_date
-        ):
-            cols[i].write("")
-            continue
+            current_date = date(year, month, day)
 
-        date_str = current_date.isoformat()
-
-        status = attendance_data.get(
-            date_str,
-            "未選択"
-        )
-
-        # 状態表示
-        if status == "出席":
-
-            label = f"🟩\\n{day}"
-
-        elif status == "欠席":
-
-            label = f"🟥\\n{day}"
-
-        else:
-
-            label = f"⬛\\n{day}"
-
-        with cols[i]:
-
-            if st.button(
-                label,
-                key=f"open_{date_str}",
-                use_container_width=True
+            if (
+                current_date < start_date
+                or current_date > end_date
             ):
+                cols[i].write("")
+                continue
 
-                st.session_state.selected_date = date_str
+            date_str = current_date.isoformat()
 
-# ======================================
-# モーダル風ポップアップ
-# ======================================
-if st.session_state.selected_date:
+            status = attendance_data.get(
+                date_str,
+                "未選択"
+            )
 
-    selected_date = st.session_state.selected_date
+            if status == "出席":
+                status_text = "🟩 出席"
 
-    current_status = attendance_data.get(
-        selected_date,
-        "未選択"
-    )
+            elif status == "欠席":
+                status_text = "🟥 欠席"
 
-    st.markdown(
-        """
-        <div class="popup-box">
-        """,
-        unsafe_allow_html=True
-    )
+            else:
+                status_text = "⬜ 未選択"
 
-    st.subheader(f"📅 {selected_date}")
+            with cols[i]:
 
-    st.write("出欠席を設定してください")
+                st.markdown(
+                    f'''
+                    <div class="day-card">
+                    <div class="day-number">{day}</div>
+                    <div>{status_text}</div>
+                    </div>
+                    ''',
+                    unsafe_allow_html=True
+                )
 
-    col1, col2, col3 = st.columns(3)
+                if st.button(
+                    "出席",
+                    key=f"attend_{date_str}"
+                ):
+                    set_status(date_str, "出席")
+                    st.rerun()
 
-    with col1:
+                if st.button(
+                    "欠席",
+                    key=f"absent_{date_str}"
+                ):
+                    set_status(date_str, "欠席")
+                    st.rerun()
 
-        if st.button(
-            "🟩 出席",
-            use_container_width=True
-        ):
+                if st.button(
+                    "リセット",
+                    key=f"reset_{date_str}"
+                ):
+                    set_status(date_str, "未選択")
+                    st.rerun()
 
-            set_status(selected_date, "出席")
-            st.session_state.selected_date = None
-            st.rerun()
+    # ======================================
+    # スマホ表示
+    # ======================================
+    else:
 
-    with col2:
+        for i, day in enumerate(week):
 
-        if st.button(
-            "🟥 欠席",
-            use_container_width=True
-        ):
+            if day == 0:
+                continue
 
-            set_status(selected_date, "欠席")
-            st.session_state.selected_date = None
-            st.rerun()
+            current_date = date(year, month, day)
 
-    with col3:
+            if (
+                current_date < start_date
+                or current_date > end_date
+            ):
+                continue
 
-        if st.button(
-            "⬛ リセット",
-            use_container_width=True
-        ):
+            date_str = current_date.isoformat()
 
-            set_status(selected_date, "未選択")
-            st.session_state.selected_date = None
-            st.rerun()
+            status = attendance_data.get(
+                date_str,
+                "未選択"
+            )
 
-    if st.button("閉じる"):
+            if status == "出席":
+                status_text = "🟩 出席"
 
-        st.session_state.selected_date = None
-        st.rerun()
+            elif status == "欠席":
+                status_text = "🟥 欠席"
 
-    st.markdown(
-        "</div>",
-        unsafe_allow_html=True
-    )
+            else:
+                status_text = "⬜ 未選択"
+
+            st.markdown(
+                f'''
+                <div class="day-card">
+                <div class="day-number">{day}日</div>
+                <div>{status_text}</div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+
+                if st.button(
+                    "出席",
+                    key=f"attend_{date_str}"
+                ):
+                    set_status(date_str, "出席")
+                    st.rerun()
+
+            with col2:
+
+                if st.button(
+                    "欠席",
+                    key=f"absent_{date_str}"
+                ):
+                    set_status(date_str, "欠席")
+                    st.rerun()
+
+            with col3:
+
+                if st.button(
+                    "リセット",
+                    key=f"reset_{date_str}"
+                ):
+                    set_status(date_str, "未選択")
+                    st.rerun()
 
 # ======================================
 # 閉じタグ
