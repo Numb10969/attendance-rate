@@ -24,7 +24,7 @@ st.markdown("""
     color: white;
 }
 
-/* 上余白調整 */
+/* 上下余白 */
 .block-container {
     padding-top: 0.5rem;
     padding-bottom: 1rem;
@@ -35,7 +35,7 @@ st.markdown("""
     font-size: clamp(28px, 5vw, 48px);
     font-weight: bold;
     color: #00ff88;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
     word-break: break-word;
 }
 
@@ -48,7 +48,7 @@ st.markdown("""
     margin-bottom: 30px;
 }
 
-/* 月 */
+/* 月ボックス */
 .month-box {
     background-color: #161b22;
     border-radius: 15px;
@@ -67,7 +67,7 @@ st.markdown("""
     border: 1px solid #333;
 }
 
-/* 日付 */
+/* 日付数字 */
 .day-number {
     color: #00ff88;
     font-size: 24px;
@@ -93,7 +93,7 @@ st.markdown("""
     margin-bottom: 5px;
 }
 
-/* ボタン hover */
+/* hover */
 .stButton button:hover {
     border: 1px solid #00ff88;
     color: #00ff88;
@@ -121,20 +121,30 @@ SAVE_FILE = "attendance_data.json"
 # データ読み込み
 # ======================================
 def load_data():
+
     if os.path.exists(SAVE_FILE):
+
         try:
             with open(SAVE_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
+
         except:
             return {}
+
     return {}
 
 # ======================================
 # データ保存
 # ======================================
 def save_data(data):
+
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
 
 # ======================================
 # 初期化
@@ -150,9 +160,12 @@ attendance_data = st.session_state.attendance_data
 today = date.today()
 
 if today.month >= 4:
+
     start_date = date(today.year, 4, 1)
     end_date = date(today.year + 1, 4, 1)
+
 else:
+
     start_date = date(today.year - 1, 4, 1)
     end_date = date(today.year, 4, 1)
 
@@ -160,7 +173,11 @@ else:
 # タイトル
 # ======================================
 st.markdown(
-    '<div class="main-title">出席率管理カレンダー</div>',
+    """
+    <div class="main-title">
+    出席率管理カレンダー
+    </div>
+    """,
     unsafe_allow_html=True
 )
 
@@ -184,10 +201,10 @@ rate = 0 if total == 0 else (attended / total) * 100
 # ======================================
 # 情報表示
 # ======================================
-st.markdown('<div class="info-box">', unsafe_allow_html=True)
-
 st.markdown(
     f"""
+    <div class="info-box">
+
     <h1 style="color:#00ff88;">
     出席率: {rate:.2f}%
     </h1>
@@ -197,11 +214,11 @@ st.markdown(
     🟥 欠席: {absent}日　
     📅 合計: {total}日
     </h3>
+
+    </div>
     """,
     unsafe_allow_html=True
 )
-
-st.markdown("</div>", unsafe_allow_html=True)
 
 # ======================================
 # 状態変更
@@ -209,8 +226,10 @@ st.markdown("</div>", unsafe_allow_html=True)
 def set_status(date_str, status):
 
     if status == "未選択":
+
         if date_str in attendance_data:
             del attendance_data[date_str]
+
     else:
         attendance_data[date_str] = status
 
@@ -226,6 +245,7 @@ while current <= end_date:
     year = current.year
     month = current.month
 
+    # 月タイトル
     st.markdown(
         f"""
         <div class="month-box">
@@ -236,17 +256,25 @@ while current <= end_date:
         unsafe_allow_html=True
     )
 
+    # 曜日
     weekdays = ["月", "火", "水", "木", "金", "土", "日"]
 
     header_cols = st.columns(7)
 
-    for i, w in enumerate(weekdays):
+    for i, weekday in enumerate(weekdays):
+
         with header_cols[i]:
+
             st.markdown(
-                f'<div class="weekday">{w}</div>',
+                f"""
+                <div class="weekday">
+                {weekday}
+                </div>
+                """,
                 unsafe_allow_html=True
             )
 
+    # カレンダー生成
     cal = calendar.Calendar(firstweekday=0)
 
     for week in cal.monthdayscalendar(year, month):
@@ -261,7 +289,10 @@ while current <= end_date:
 
             current_date = date(year, month, day)
 
-            if current_date < start_date or current_date > end_date:
+            if (
+                current_date < start_date
+                or current_date > end_date
+            ):
                 cols[i].write("")
                 continue
 
@@ -275,8 +306,10 @@ while current <= end_date:
             # 状態表示
             if status == "出席":
                 status_text = "🟩 出席"
+
             elif status == "欠席":
                 status_text = "🟥 欠席"
+
             else:
                 status_text = "⬜ 未選択"
 
@@ -285,8 +318,15 @@ while current <= end_date:
                 st.markdown(
                     f"""
                     <div class="day-card">
-                    <div class="day-number">{day}</div>
-                    <div>{status_text}</div>
+
+                    <div class="day-number">
+                    {day}
+                    </div>
+
+                    <div>
+                    {status_text}
+                    </div>
+
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -297,6 +337,7 @@ while current <= end_date:
                     "出席",
                     key=f"attend_{date_str}"
                 ):
+
                     set_status(date_str, "出席")
                     st.rerun()
 
@@ -305,6 +346,7 @@ while current <= end_date:
                     "欠席",
                     key=f"absent_{date_str}"
                 ):
+
                     set_status(date_str, "欠席")
                     st.rerun()
 
@@ -313,13 +355,19 @@ while current <= end_date:
                     "リセット",
                     key=f"reset_{date_str}"
                 ):
+
                     set_status(date_str, "未選択")
                     st.rerun()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    # month-box閉じる
+    st.markdown(
+        "</div>",
+        unsafe_allow_html=True
+    )
 
     # 次の月
     if month == 12:
         current = date(year + 1, 1, 1)
+
     else:
         current = date(year, month + 1, 1)
