@@ -24,9 +24,9 @@ st.markdown("""
     color: white;
 }
 
-/* 余白 */
+/* 上下余白 */
 .block-container {
-    padding-top: 0.5rem;
+    padding-top: clamp(1rem, 5vw, 4rem);
     padding-bottom: 1rem;
 }
 
@@ -247,8 +247,6 @@ while current <= end_date:
 # ======================================
 # 現在月index
 # ======================================
-current_month_str = f"{today.year}年 {today.month}月"
-
 default_index = 0
 
 for i, m in enumerate(months):
