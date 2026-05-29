@@ -60,8 +60,8 @@ st.markdown("""
 .day-card {
     background-color: #0f141b;
     border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 8px;
+    margin-bottom: 8px;
     text-align: center;
     border: 1px solid #333;
 }
@@ -69,7 +69,7 @@ st.markdown("""
 /* 日付 */
 .day-number {
     color: #00ff88;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: bold;
 }
 
@@ -77,7 +77,7 @@ st.markdown("""
 .weekday {
     text-align: center;
     color: #00ff88;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     margin-bottom: 10px;
 }
@@ -104,30 +104,24 @@ st.markdown("""
     color: white;
 }
 
-/* スクロールバー */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #00ff88;
-    border-radius: 10px;
-}
-
-/* スマホ対応 */
+/* スマホ */
 @media (max-width: 768px) {
 
     .day-number {
-        font-size: 18px;
+        font-size: 14px;
     }
 
     .weekday {
-        font-size: 14px;
+        font-size: 12px;
+    }
+
+    .day-card {
+        padding: 4px;
     }
 
     .stButton button {
         font-size: 12px;
-        padding: 0.3rem;
+        padding: 0.4rem;
     }
 
 }
@@ -178,6 +172,12 @@ if "attendance_data" not in st.session_state:
     st.session_state.attendance_data = load_data()
 
 attendance_data = st.session_state.attendance_data
+
+# ======================================
+# 選択日
+# ======================================
+if "selected_date" not in st.session_state:
+    st.session_state.selected_date = None
 
 # ======================================
 # スマホ判定
@@ -251,7 +251,7 @@ st.markdown(
 )
 
 # ======================================
-# 月リスト作成
+# 月リスト
 # ======================================
 months = []
 
@@ -268,7 +268,7 @@ while current <= end_date:
         current = date(current.year, current.month + 1, 1)
 
 # ======================================
-# 現在月index
+# 現在月
 # ======================================
 default_index = 0
 
@@ -282,7 +282,7 @@ for i, m in enumerate(months):
         break
 
 # ======================================
-# 月切り替えUI
+# 月選択
 # ======================================
 selected_month = st.selectbox(
     "表示する月",
@@ -310,7 +310,7 @@ def set_status(date_str, status):
     save_data(attendance_data)
 
 # ======================================
-# 月表示
+# 月タイトル
 # ======================================
 st.markdown(
     f"""
@@ -325,24 +325,22 @@ st.markdown(
 # ======================================
 # 曜日
 # ======================================
-if not is_mobile:
+weekdays = ["月", "火", "水", "木", "金", "土", "日"]
 
-    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+header_cols = st.columns(7)
 
-    header_cols = st.columns(7)
+for i, weekday in enumerate(weekdays):
 
-    for i, weekday in enumerate(weekdays):
+    with header_cols[i]:
 
-        with header_cols[i]:
-
-            st.markdown(
-                f"""
-                <div class="weekday">
-                {weekday}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            f"""
+            <div class="weekday">
+            {weekday}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
 # ======================================
 # カレンダー生成
@@ -351,149 +349,88 @@ cal = calendar.Calendar(firstweekday=0)
 
 for week in cal.monthdayscalendar(year, month):
 
-    # ======================================
-    # PC表示
-    # ======================================
-    if not is_mobile:
+    cols = st.columns(7)
 
-        cols = st.columns(7)
+    for i, day in enumerate(week):
 
-        for i, day in enumerate(week):
+        if day == 0:
+            cols[i].write("")
+            continue
 
-            if day == 0:
-                cols[i].write("")
-                continue
+        current_date = date(year, month, day)
 
-            current_date = date(year, month, day)
+        if (
+            current_date < start_date
+            or current_date > end_date
+        ):
+            cols[i].write("")
+            continue
 
-            if (
-                current_date < start_date
-                or current_date > end_date
+        date_str = current_date.isoformat()
+
+        status = attendance_data.get(
+            date_str,
+            "未選択"
+        )
+
+        # 状態色
+        if status == "出席":
+            label = f"🟩 {day}"
+
+        elif status == "欠席":
+            label = f"🟥 {day}"
+
+        else:
+            label = f"⬜ {day}"
+
+        with cols[i]:
+
+            if st.button(
+                label,
+                key=f"open_{date_str}",
+                use_container_width=True
             ):
-                cols[i].write("")
-                continue
 
-            date_str = current_date.isoformat()
+                st.session_state.selected_date = date_str
 
-            status = attendance_data.get(
-                date_str,
-                "未選択"
-            )
+# ======================================
+# 日付編集UI
+# ======================================
+if st.session_state.selected_date:
 
-            if status == "出席":
-                status_text = "🟩 出席"
+    selected_date = st.session_state.selected_date
 
-            elif status == "欠席":
-                status_text = "🟥 欠席"
+    current_status = attendance_data.get(
+        selected_date,
+        "未選択"
+    )
 
-            else:
-                status_text = "⬜ 未選択"
+    st.markdown("---")
 
-            with cols[i]:
+    st.subheader(f"{selected_date} の設定")
 
-                st.markdown(
-                    f'''
-                    <div class="day-card">
-                    <div class="day-number">{day}</div>
-                    <div>{status_text}</div>
-                    </div>
-                    ''',
-                    unsafe_allow_html=True
-                )
+    new_status = st.radio(
+        "状態を選択",
+        ["出席", "欠席", "未選択"],
+        index=["出席", "欠席", "未選択"].index(current_status),
+        horizontal=True
+    )
 
-                if st.button(
-                    "出席",
-                    key=f"attend_{date_str}"
-                ):
-                    set_status(date_str, "出席")
-                    st.rerun()
+    col1, col2 = st.columns(2)
 
-                if st.button(
-                    "欠席",
-                    key=f"absent_{date_str}"
-                ):
-                    set_status(date_str, "欠席")
-                    st.rerun()
+    with col1:
 
-                if st.button(
-                    "リセット",
-                    key=f"reset_{date_str}"
-                ):
-                    set_status(date_str, "未選択")
-                    st.rerun()
+        if st.button("保存"):
 
-    # ======================================
-    # スマホ表示
-    # ======================================
-    else:
+            set_status(selected_date, new_status)
+            st.rerun()
 
-        for i, day in enumerate(week):
+    with col2:
 
-            if day == 0:
-                continue
+        if st.button("閉じる"):
 
-            current_date = date(year, month, day)
-
-            if (
-                current_date < start_date
-                or current_date > end_date
-            ):
-                continue
-
-            date_str = current_date.isoformat()
-
-            status = attendance_data.get(
-                date_str,
-                "未選択"
-            )
-
-            if status == "出席":
-                status_text = "🟩 出席"
-
-            elif status == "欠席":
-                status_text = "🟥 欠席"
-
-            else:
-                status_text = "⬜ 未選択"
-
-            st.markdown(
-                f'''
-                <div class="day-card">
-                <div class="day-number">{day}日</div>
-                <div>{status_text}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-
-                if st.button(
-                    "出席",
-                    key=f"attend_{date_str}"
-                ):
-                    set_status(date_str, "出席")
-                    st.rerun()
-
-            with col2:
-
-                if st.button(
-                    "欠席",
-                    key=f"absent_{date_str}"
-                ):
-                    set_status(date_str, "欠席")
-                    st.rerun()
-
-            with col3:
-
-                if st.button(
-                    "リセット",
-                    key=f"reset_{date_str}"
-                ):
-                    set_status(date_str, "未選択")
-                    st.rerun()
+            st.session_state.selected_date = None
+            st.rerun()
 
 # ======================================
 # 閉じタグ
