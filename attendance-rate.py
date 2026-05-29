@@ -18,22 +18,25 @@ st.set_page_config(
 st.markdown("""
 <style>
 
+/* 全体 */
 .stApp {
     background-color: #0d1117;
     color: white;
 }
 
-/* Streamlitデフォルト余白 */
+/* 上余白調整 */
 .block-container {
-    padding-top: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
 }
 
 /* タイトル */
 .main-title {
-    font-size: 48px;
+    font-size: clamp(28px, 5vw, 48px);
     font-weight: bold;
     color: #00ff88;
     margin-bottom: 10px;
+    word-break: break-word;
 }
 
 /* 情報ボックス */
@@ -64,7 +67,7 @@ st.markdown("""
     border: 1px solid #333;
 }
 
-/* 日付数字 */
+/* 日付 */
 .day-number {
     color: #00ff88;
     font-size: 24px;
@@ -80,11 +83,6 @@ st.markdown("""
     margin-bottom: 10px;
 }
 
-/* セレクトボックス */
-.stSelectbox div[data-baseweb="select"] {
-    background-color: #111;
-}
-
 /* ボタン */
 .stButton button {
     width: 100%;
@@ -92,12 +90,23 @@ st.markdown("""
     border: 1px solid #00ff88;
     background-color: #111;
     color: white;
+    margin-bottom: 5px;
 }
 
 /* ボタン hover */
 .stButton button:hover {
     border: 1px solid #00ff88;
     color: #00ff88;
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #00ff88;
+    border-radius: 10px;
 }
 
 </style>
@@ -136,7 +145,7 @@ if "attendance_data" not in st.session_state:
 attendance_data = st.session_state.attendance_data
 
 # ======================================
-# 期間
+# 期間設定
 # ======================================
 today = date.today()
 
@@ -198,7 +207,13 @@ st.markdown("</div>", unsafe_allow_html=True)
 # 状態変更
 # ======================================
 def set_status(date_str, status):
-    attendance_data[date_str] = status
+
+    if status == "未選択":
+        if date_str in attendance_data:
+            del attendance_data[date_str]
+    else:
+        attendance_data[date_str] = status
+
     save_data(attendance_data)
 
 # ======================================
@@ -252,9 +267,12 @@ while current <= end_date:
 
             date_str = current_date.isoformat()
 
-            status = attendance_data.get(date_str, "未選択")
+            status = attendance_data.get(
+                date_str,
+                "未選択"
+            )
 
-            # 色表示
+            # 状態表示
             if status == "出席":
                 status_text = "🟩 出席"
             elif status == "欠席":
@@ -274,6 +292,7 @@ while current <= end_date:
                     unsafe_allow_html=True
                 )
 
+                # 出席
                 if st.button(
                     "出席",
                     key=f"attend_{date_str}"
@@ -281,6 +300,7 @@ while current <= end_date:
                     set_status(date_str, "出席")
                     st.rerun()
 
+                # 欠席
                 if st.button(
                     "欠席",
                     key=f"absent_{date_str}"
@@ -288,6 +308,7 @@ while current <= end_date:
                     set_status(date_str, "欠席")
                     st.rerun()
 
+                # リセット
                 if st.button(
                     "リセット",
                     key=f"reset_{date_str}"
@@ -302,8 +323,3 @@ while current <= end_date:
         current = date(year + 1, 1, 1)
     else:
         current = date(year, month + 1, 1)
-
-# ======================================
-# 完了表示
-# ======================================
-st.success("自動保存されています")
