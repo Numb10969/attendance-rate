@@ -4,501 +4,255 @@ import calendar
 import json
 import os
 
-# ======================================
-# ページ設定
-# ======================================
 st.set_page_config(
-    page_title="出席率カレンダー",
-    layout="wide"
+page_title="出席率管理",
+layout="wide"
 )
 
-# ======================================
-# CSS
-# ======================================
-st.markdown("""
-<style>
+SAVE_FILE = "attendance.json"
 
-/* 全体 */
-.stApp {
-    background-color: #0d1117;
-    color: white;
-}
-
-/* 余白 */
-.block-container {
-    padding-top: clamp(1rem, 5vw, 4rem);
-    padding-bottom: 1rem;
-}
-
-/* タイトル */
-.main-title {
-    font-size: clamp(28px, 5vw, 48px);
-    font-weight: bold;
-    color: #00ff88;
-    margin-bottom: 15px;
-    word-break: break-word;
-}
-
-/* 情報ボックス */
-.info-box {
-    background-color: #161b22;
-    border: 2px solid #00ff88;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 25px;
-}
-
-/* 月ボックス */
-.month-box {
-    background-color: #161b22;
-    border-radius: 15px;
-    padding: 20px;
-    border: 1px solid #00ff88;
-}
-
-/* 日付カード */
-.day-card {
-    background-color: #0f141b;
-    border-radius: 10px;
-    padding: 10px;
-    margin-bottom: 10px;
-    text-align: center;
-    border: 1px solid #333;
-}
-
-/* 日付 */
-.day-number {
-    color: #00ff88;
-    font-size: 24px;
-    font-weight: bold;
-}
-
-/* 曜日 */
-.weekday {
-    text-align: center;
-    color: #00ff88;
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
-
-/* ボタン */
-.stButton button {
-    width: 100%;
-    border-radius: 8px;
-    border: 1px solid #00ff88;
-    background-color: #111;
-    color: white;
-    margin-bottom: 5px;
-}
-
-/* hover */
-.stButton button:hover {
-    border: 1px solid #00ff88;
-    color: #00ff88;
-}
-
-/* selectbox */
-.stSelectbox div[data-baseweb="select"] {
-    background-color: #111;
-    color: white;
-}
-
-/* スクロールバー */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #00ff88;
-    border-radius: 10px;
-}
-
-/* スマホ対応 */
-@media (max-width: 768px) {
-
-    .day-number {
-        font-size: 18px;
-    }
-
-    .weekday {
-        font-size: 14px;
-    }
-
-    .stButton button {
-        font-size: 12px;
-        padding: 0.3rem;
-    }
-
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ======================================
-# 保存ファイル
-# ======================================
-SAVE_FILE = "attendance_data.json"
-
-# ======================================
-# データ読み込み
-# ======================================
 def load_data():
+if os.path.exists(SAVE_FILE):
+try:
+with open(SAVE_FILE, "r", encoding="utf-8") as f:
+return json.load(f)
+except:
+return {}
+return {}
 
-    if os.path.exists(SAVE_FILE):
-
-        try:
-            with open(SAVE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-
-        except:
-            return {}
-
-    return {}
-
-# ======================================
-# データ保存
-# ======================================
 def save_data(data):
+with open(SAVE_FILE, "w", encoding="utf-8") as f:
+json.dump(
+data,
+f,
+ensure_ascii=False,
+indent=2
+)
 
-    with open(SAVE_FILE, "w", encoding="utf-8") as f:
+if "data" not in st.session_state:
+st.session_state.data = load_data()
 
-        json.dump(
-            data,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
+data = st.session_state.data
 
-# ======================================
-# 初期化
-# ======================================
-if "attendance_data" not in st.session_state:
-
-    st.session_state.attendance_data = load_data()
-
-attendance_data = st.session_state.attendance_data
-
-# ======================================
-# スマホ判定
-# ======================================
-is_mobile = st.query_params.get("mobile", "0") == "1"
-
-# ======================================
-# 期間設定
-# ======================================
 today = date.today()
 
 if today.month >= 4:
-
-    start_date = date(today.year, 4, 1)
-    end_date = date(today.year + 1, 4, 1)
-
+start_year = today.year
 else:
+start_year = today.year - 1
 
-    start_date = date(today.year - 1, 4, 1)
-    end_date = date(today.year, 4, 1)
-
-# ======================================
-# タイトル
-# ======================================
-st.markdown(
-    """
-    <div class="main-title">
-    出席率管理カレンダー
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# ======================================
-# 出席率計算
-# ======================================
-attended = sum(
-    1 for v in attendance_data.values()
-    if v == "出席"
-)
-
-absent = sum(
-    1 for v in attendance_data.values()
-    if v == "欠席"
-)
-
-total = attended + absent
-
-rate = 0 if total == 0 else (attended / total) * 100
-
-# ======================================
-# 情報表示
-# ======================================
-st.markdown(
-    f"""
-    <div class="info-box">
-
-    <h1 style="color:#00ff88;">
-    出席率: {rate:.2f}%
-    </h1>
-
-    <h3>
-    🟩 出席: {attended}日　
-    🟥 欠席: {absent}日　
-    📅 合計: {total}日
-    </h3>
-
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# ======================================
-# 月リスト作成
-# ======================================
 months = []
 
-current = start_date
+for y in [start_year, start_year + 1]:
+for m in range(1, 13):
 
-while current <= end_date:
+```
+    if y == start_year and m < 4:
+        continue
 
-    months.append(current)
+    if y == start_year + 1 and m > 4:
+        continue
 
-    if current.month == 12:
-        current = date(current.year + 1, 1, 1)
+    months.append(date(y, m, 1))
+```
 
-    else:
-        current = date(current.year, current.month + 1, 1)
+default_month = date(today.year, today.month, 1)
 
-# ======================================
-# 現在月index
-# ======================================
 default_index = 0
 
-for i, m in enumerate(months):
+for i, d in enumerate(months):
+if d.year == default_month.year and d.month == default_month.month:
+default_index = i
+break
 
-    if (
-        m.year == today.year
-        and m.month == today.month
-    ):
-        default_index = i
-        break
+st.title("📚 出席率管理カレンダー")
 
-# ======================================
-# 月切り替えUI
-# ======================================
+total_attended = sum(
+item.get("attended", 0)
+for item in data.values()
+)
+
+total_absent = sum(
+item.get("absent", 0)
+for item in data.values()
+)
+
+total_classes = total_attended + total_absent
+
+rate = (
+total_attended / total_classes * 100
+if total_classes > 0
+else 0
+)
+
+c1, c2, c3, c4 = st.columns(4)
+
+c1.metric(
+"出席率",
+f"{rate:.2f}%"
+)
+
+c2.metric(
+"出席授業数",
+total_attended
+)
+
+c3.metric(
+"欠席授業数",
+total_absent
+)
+
+c4.metric(
+"総授業数",
+total_classes
+)
+
 selected_month = st.selectbox(
-    "表示する月",
-    options=months,
-    index=default_index,
-    format_func=lambda d: f"{d.year}年 {d.month}月"
+"表示月",
+months,
+index=default_index,
+format_func=lambda x:
+f"{x.year}年{x.month}月"
 )
 
 year = selected_month.year
 month = selected_month.month
 
-# ======================================
-# 状態変更
-# ======================================
-def set_status(date_str, status):
+if "selected_date" not in st.session_state:
+st.session_state.selected_date = None
 
-    if status == "未選択":
+@st.dialog("授業数入力")
+def edit_day():
 
-        if date_str in attendance_data:
-            del attendance_data[date_str]
+```
+date_str = st.session_state.selected_date
 
-    else:
-        attendance_data[date_str] = status
-
-    save_data(attendance_data)
-
-# ======================================
-# 月表示
-# ======================================
-st.markdown(
-    f"""
-    <div class="month-box">
-    <h2 style="color:#00ff88;">
-    {year}年 {month}月
-    </h2>
-    """,
-    unsafe_allow_html=True
+current = data.get(
+    date_str,
+    {
+        "attended": 0,
+        "absent": 0
+    }
 )
 
-# ======================================
-# 曜日
-# ======================================
-if not is_mobile:
+attended = st.number_input(
+    "出席授業数",
+    min_value=0,
+    step=1,
+    value=current["attended"]
+)
 
-    weekdays = ["月", "火", "水", "木", "金", "土", "日"]
+absent = st.number_input(
+    "欠席授業数",
+    min_value=0,
+    step=1,
+    value=current["absent"]
+)
 
-    header_cols = st.columns(7)
+col1, col2 = st.columns(2)
 
-    for i, weekday in enumerate(weekdays):
+with col1:
 
-        with header_cols[i]:
+    if st.button(
+        "保存",
+        use_container_width=True
+    ):
 
-            st.markdown(
-                f"""
-                <div class="weekday">
-                {weekday}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+        data[date_str] = {
+            "attended": attended,
+            "absent": absent
+        }
 
-# ======================================
-# カレンダー生成
-# ======================================
-cal = calendar.Calendar(firstweekday=0)
+        save_data(data)
 
-for week in cal.monthdayscalendar(year, month):
+        st.rerun()
 
-    # ======================================
-    # PC表示
-    # ======================================
-    if not is_mobile:
+with col2:
 
-        cols = st.columns(7)
+    if st.button(
+        "削除",
+        use_container_width=True
+    ):
 
-        for i, day in enumerate(week):
+        if date_str in data:
+            del data[date_str]
 
-            if day == 0:
-                cols[i].write("")
-                continue
+        save_data(data)
 
-            current_date = date(year, month, day)
+        st.rerun()
+```
 
-            if (
-                current_date < start_date
-                or current_date > end_date
-            ):
-                cols[i].write("")
-                continue
+weekdays = [
+"月",
+"火",
+"水",
+"木",
+"金",
+"土",
+"日"
+]
 
-            date_str = current_date.isoformat()
+header = st.columns(7)
 
-            status = attendance_data.get(
-                date_str,
-                "未選択"
-            )
+for i, wd in enumerate(weekdays):
+header[i].markdown(
+f"**{wd}**"
+)
 
-            if status == "出席":
-                status_text = "🟩 出席"
+cal = calendar.Calendar(
+firstweekday=0
+)
 
-            elif status == "欠席":
-                status_text = "🟥 欠席"
+for week in cal.monthdayscalendar(
+year,
+month
+):
 
-            else:
-                status_text = "⬜ 未選択"
+```
+cols = st.columns(7)
 
-            with cols[i]:
+for i, day in enumerate(week):
 
-                st.markdown(
-                    f'''
-                    <div class="day-card">
-                    <div class="day-number">{day}</div>
-                    <div>{status_text}</div>
-                    </div>
-                    ''',
-                    unsafe_allow_html=True
-                )
+    if day == 0:
+        cols[i].write("")
+        continue
 
-                if st.button(
-                    "出席",
-                    key=f"attend_{date_str}"
-                ):
-                    set_status(date_str, "出席")
-                    st.rerun()
+    current_date = date(
+        year,
+        month,
+        day
+    )
 
-                if st.button(
-                    "欠席",
-                    key=f"absent_{date_str}"
-                ):
-                    set_status(date_str, "欠席")
-                    st.rerun()
+    date_str = current_date.isoformat()
 
-                if st.button(
-                    "リセット",
-                    key=f"reset_{date_str}"
-                ):
-                    set_status(date_str, "未選択")
-                    st.rerun()
+    value = data.get(
+        date_str,
+        None
+    )
 
-    # ======================================
-    # スマホ表示
-    # ======================================
+    if value:
+
+        attended = value["attended"]
+        absent = value["absent"]
+
+        label = (
+            f"{day}\n"
+            f"⭕{attended}\n"
+            f"❌{absent}"
+        )
+
     else:
 
-        for i, day in enumerate(week):
+        label = str(day)
 
-            if day == 0:
-                continue
+    with cols[i]:
 
-            current_date = date(year, month, day)
+        if st.button(
+            label,
+            key=date_str,
+            use_container_width=True
+        ):
 
-            if (
-                current_date < start_date
-                or current_date > end_date
-            ):
-                continue
-
-            date_str = current_date.isoformat()
-
-            status = attendance_data.get(
-                date_str,
-                "未選択"
-            )
-
-            if status == "出席":
-                status_text = "🟩 出席"
-
-            elif status == "欠席":
-                status_text = "🟥 欠席"
-
-            else:
-                status_text = "⬜ 未選択"
-
-            st.markdown(
-                f'''
-                <div class="day-card">
-                <div class="day-number">{day}日</div>
-                <div>{status_text}</div>
-                </div>
-                ''',
-                unsafe_allow_html=True
-            )
-
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-
-                if st.button(
-                    "出席",
-                    key=f"attend_{date_str}"
-                ):
-                    set_status(date_str, "出席")
-                    st.rerun()
-
-            with col2:
-
-                if st.button(
-                    "欠席",
-                    key=f"absent_{date_str}"
-                ):
-                    set_status(date_str, "欠席")
-                    st.rerun()
-
-            with col3:
-
-                if st.button(
-                    "リセット",
-                    key=f"reset_{date_str}"
-                ):
-                    set_status(date_str, "未選択")
-                    st.rerun()
-
-# ======================================
-# 閉じタグ
-# ======================================
-st.markdown(
-    "</div>",
-    unsafe_allow_html=True
-)
+            st.session_state.selected_date = date_str
+            edit_day()
+```
