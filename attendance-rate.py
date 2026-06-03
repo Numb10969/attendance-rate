@@ -180,6 +180,15 @@ if total_classes > 0:
         / total_classes
         * 100
     )
+
+else:
+
+    attendance_rate = 0
+
+# --------------------------
+# 補正値読込
+# --------------------------
+
 correction = load_correction()
 
 display_rate = (
@@ -194,11 +203,6 @@ display_rate = max(
         display_rate
     )
 )
-
-else:
-
-    attendance_rate = 0
-
 # ==================================================
 # タイトル
 # ==================================================
