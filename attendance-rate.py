@@ -75,6 +75,38 @@ def load_data():
 
     return result.data
 
+def load_correction():
+
+    result = (
+        supabase
+        .table("settings")
+        .select("*")
+        .eq("key", "correction")
+        .execute()
+    )
+
+    if result.data:
+
+        return float(
+            result.data[0]["value"]
+        )
+
+    return 0.0
+
+def save_correction(value):
+
+    (
+        supabase
+        .table("settings")
+        .upsert(
+            {
+                "key": "correction",
+                "value": str(value)
+            }
+        )
+        .execute()
+    )
+
 
 def save_data(
     date_str,
@@ -148,6 +180,20 @@ if total_classes > 0:
         / total_classes
         * 100
     )
+correction = load_correction()
+
+display_rate = (
+    attendance_rate
+    + correction
+)
+
+display_rate = max(
+    0,
+    min(
+        100,
+        display_rate
+    )
+)
 
 else:
 
@@ -164,8 +210,8 @@ c1, c2, c3, c4 = st.columns(4)
 with c1:
 
     st.metric(
-        "出席率",
-        f"{attendance_rate:.2f}%"
+       "出席率",
+       f"{display_rate:.2f}%"
     )
 
 with c2:
@@ -193,6 +239,33 @@ with c4:
 # 表示月
 # ==================================================
 
+st.markdown("---")
+
+st.subheader(
+    "出席率補正"
+)
+
+new_correction = st.number_input(
+    "補正値 (%)",
+    value=correction,
+    step=0.01,
+    format="%.2f"
+)
+
+if st.button(
+    "補正値を保存"
+):
+
+    save_correction(
+        new_correction
+    )
+
+    st.success(
+        "保存しました"
+    )
+
+    st.rerun()
+    
 today = date.today()
 
 if today.month >= 4:
