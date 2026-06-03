@@ -77,36 +77,53 @@ def load_data():
 
 def load_correction():
 
-    result = (
-        supabase
-        .table("settings")
-        .select("*")
-        .eq("key", "correction")
-        .execute()
-    )
+    try:
 
-    if result.data:
-
-        return float(
-            result.data[0]["value"]
+        result = (
+            supabase
+            .table("settings")
+            .select("value")
+            .eq("key", "correction")
+            .execute()
         )
+
+        if result.data:
+
+            return float(
+                result.data[0]["value"]
+            )
+
+    except Exception:
+        pass
 
     return 0.0
 
+
 def save_correction(value):
 
-    (
-        supabase
-        .table("settings")
-        .upsert(
-            {
-                "key": "correction",
-                "value": str(value)
-            }
-        )
-        .execute()
-    )
+    try:
 
+        (
+            supabase
+            .table("settings")
+            .upsert(
+                {
+                    "key": "correction",
+                    "value": str(value)
+                }
+            )
+            .execute()
+        )
+
+        return True
+
+    except Exception as e:
+
+        st.error(
+            f"補正値の保存に失敗しました: {e}"
+        )
+
+        return False
 
 def save_data(
     date_str,
@@ -260,15 +277,15 @@ if st.button(
     "補正値を保存"
 ):
 
-    save_correction(
+    if save_correction(
         new_correction
-    )
+    ):
 
-    st.success(
-        "保存しました"
-    )
+        st.success(
+            "保存しました"
+        )
 
-    st.rerun()
+        st.rerun()
     
 today = date.today()
 
